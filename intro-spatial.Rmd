@@ -1,12 +1,13 @@
 ---
 title: "Intro to Spatial Data in R"
-author: "Caitlin Mothes"
+author: "Caitlin Mothes - Devin Hunt"
 date:  "`r Sys.Date()`"
-output: github_document
+output: html_document
+
 ---
 
 ```{r setup, include= FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, eval = FALSE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, eval = TRUE)
 ```
 
 ## 1. Spatial Data Formats
@@ -37,6 +38,7 @@ We will be using the `tigris` package to import some vector data, and `elevatr` 
 
 ```{r}
 source("setup.R")
+load("data/spatial_objects.RData")
 ```
 
 First, create a new directory in your project called 'data/' where you will be saving all the data used for this week's lesson.
@@ -49,7 +51,7 @@ First, create a new directory in your project called 'data/' where you will be s
 
 All the data we are working with in this lesson is confined to the state of Colorado. Let's start by pulling in political boundaries for Colorado counties with the `tigris` package, which returns a shapefile consisting of polygons for each county.
 
-```{r}
+```{r, echo = FALSE, message = FALSE, eval = FALSE}
 #| message: false
 #| warning: false
 #| results: hide
@@ -64,7 +66,7 @@ The `tigris` package is one of many data retrieval R packages that uses API call
 
 `tigris` has many other data sets in addition to political boundaries. Today let's work with another shapefile, importing roads for Larimer county, which returns a polyline dataset for all roads in Larimer County.
 
-```{r}
+```{r, include=FALSE, eval = FALSE}
 roads <- roads(state = "CO", county = "Larimer")
 ```
 
@@ -80,16 +82,16 @@ tmap_mode("view")
 
 Lets view our Colorado counties and Larimer County roads shapefiles. To make a "quick thematic map" in `tmap` you can use the `qtm()` function. You can also use `tm_shape()` plus the type of spatial layer (e.g., `tm_polygons()`) to add your layers to the map if you want to customize the map a little more.
 
-```{r}
-#Using qtm
-qtm(counties)+
-  qtm(roads)
+```{r, eval = FALSE, include = FALSE}
+# Using qtm
+ qtm(counties)+
+   qtm(roads)
 
-#Using tm_shape
-tm_shape(counties)+
-  tm_polygons()+
-tm_shape(roads)+
-  tm_lines()
+# Using tm_shape
+ tm_shape(counties)+
+   tm_polygons()+
+ tm_shape(roads)+
+   tm_lines()
 ```
 
 Rendering the map may take a little while due to relatively large size of the `roads` object.
@@ -112,7 +114,10 @@ For example, we are going to do an exercise for the Poudre Canyon Highway, so we
 poudre_hwy <- roads %>% 
   filter(FULLNAME == "Poudre Canyon Hwy")
 
-qtm(poudre_hwy)
+# use grepl for finding string including 'Poudre'
+# stringr_detect(col, "thing to find")
+
+# qtm(poudre_hwy)
 ```
 
 </details>
@@ -127,13 +132,12 @@ Lets work with a couple locations along the Poudre highway, making a small data 
 poudre_points <- data.frame(name = c("Mishawaka", "Rustic", "Blue Lake Trailhead"),
                             long = c(-105.35634, -105.58159, -105.85563),
                             lat = c(40.68752, 40.69687, 40.57960))
+poudre_points_sf <- st_as_sf(poudre_points, coords = c("long", "lat"), crs = 4326)
 ```
 
 Now convert it to an `sf` object, specifying the longitude and latitude columns and the CRS (Coordinate Reference System). Note that 'x' (longitude) always goes first followed by 'y' (latitude).
 
-```{r}
-poudre_points_sf <- st_as_sf(poudre_points, coords = c("long", "lat"), crs = 4326)
-
+```{r, eval = FALSE}
 qtm(poudre_hwy)+
   qtm(poudre_points_sf)
 ```
@@ -144,7 +148,7 @@ Probably the most important part of working with spatial data is the coordinate 
 
 We can check a spatial object's CRS by printing it to the console, which will return a bunch of metadata about the object. You can specifically return the CRS for `sf` objects with `st_crs()`.
 
-```{r}
+```{r, eval = FALSE}
 # see the CRS in the header metadata:
 counties
 
@@ -154,7 +158,7 @@ st_crs(counties)
 
 You can check if two objects have the same CRS like this:
 
-```{r}
+```{r, eval = FALSE}
 st_crs(counties) == st_crs(poudre_points_sf)
 ```
 
@@ -177,7 +181,7 @@ Lets import some elevation data using the `elevatr` package. The function `get_e
 elevation <- get_elev_raster(counties, z = 7)
 ```
 
-```{r}
+```{r, eval = FALSE}
 qtm(elevation)
 ```
 
@@ -202,7 +206,7 @@ We can use the `terra` package to work with raster data. For example, we only wa
 
 ```{r}
 # If we try this, we get an error
-elevation_crop <- crop(elevation, ext(poudre_hwy))
+# elevation_crop <- crop(elevation, ext(poudre_hwy))
 
 ```
 
@@ -220,13 +224,14 @@ Now we can use `terra` functions
 ```{r}
 elevation_crop <- crop(elevation, ext(roads))
 
-tm_shape(elevation_crop)+
-  tm_raster(style = "cont")
+# tm_shape(elevation_crop)+
+#   tm_raster(style = "cont")
+
 ```
 
 Lets make a final map with all the spatial data we created
 
-```{r}
+```{r, eval = FALSE}
 tm_shape(elevation, bbox = st_bbox(poudre_hwy))+
   tm_raster(style = "cont", title = "Elevation (m)")+
 tm_shape(poudre_hwy)+
@@ -246,7 +251,8 @@ To save vector data with `sf`, use `write_sf()`
 ```{r}
 write_sf(poudre_hwy, "data/poudre_hwy.shp")
 
-write_sf(poudre_points_prj, "data/poudre_points.shp")
+write_sf(poudre_points_sf, "data/poudre_points.shp")
+
 ```
 
 While you can give the file any name you want, note that you must put '.shp' as the extension of the file.
@@ -254,7 +260,7 @@ While you can give the file any name you want, note that you must put '.shp' as 
 To save raster data with `terra` use `writeRaster()`
 
 ```{r}
-writeRaster(elevation_crop, "data/elevation_larimer.tif")
+writeRaster(elevation_crop, "data/elevation_larimer.tif", overwrite = TRUE)
 ```
 
 Same as with the vector data, when saving raster data you must add the '.tif' file extension to the name. There are various formats raster data can be stored as (e.g., ASCII, ESRI Grid) but GeoTiffs are the most common and generally easiest to deal with in R.
@@ -268,7 +274,7 @@ However, there are times you may want to save your variables as R files, such as
 Since the `poudre_hwy` and `poudre_points_prj` were objects you created in this session, to avoid the need to recreate them you can save them to an .RData file:
 
 ```{r}
-save(poudre_hwy, poudre_points_prj, file = "data/spatial_objects.RData")
+save(poudre_hwy, poudre_points_sf, counties, roads, file = "data/spatial_objects.RData")
 ```
 
 Note that you must add the 'file =' to your second argument.
@@ -276,7 +282,7 @@ Note that you must add the 'file =' to your second argument.
 Now to test out how .RData files work, remove them from your environment with `rm()` (*be careful with this function though, it is permanent!*) and load them back in with `load()`
 
 ```{r}
-rm(poudre_hwy, poudre_points_prj)
+rm(poudre_hwy, poudre_points_sf)
 ```
 
 See they are no longer in your Environment pane, but after you load the .RData file back in, it loads in those two objects with the same environmental names they were given when you saved them.
@@ -291,7 +297,7 @@ Note that `terra` objects don't properly save to .RData files, but there is a wo
 saveRDS(elevation_crop, "data/elevation_crop.RDS")
 ```
 
-```{r}
+```{r, eval=TRUE}
 readRDS("data/elevation_crop.RDS") %>% rast()
 ```
 
@@ -301,7 +307,7 @@ Note that with .RDS files you must assign the loaded file to a new environmental
 
 To read in shapefiles, you use `read_sf()`
 
-```{r}
+```{r, eval=TRUE}
 read_sf("data/poudre_hwy.shp")
 ```
 
@@ -319,8 +325,54 @@ Remember when reading in files you will want to assign them to a new variable na
 
 1.  Filter out the `counties` data set to only include Larimer, Denver, and Pueblo counties.
 
+```{r}
+poudre_points_prj <- st_transform(poudre_points_sf, st_crs(counties))
+
+counties_LDP <- counties %>% 
+  filter(NAMELSAD %in% c("Larimer County", "Denver County", "Pueblo County"))
+
+```
+
 2.  Make a map of the `counties` data colored by county area. Make a second map of counties colored by their total area of water.
+
+```{r}
+tm_shape(counties_LDP) + 
+  tm_polygons(col = "NAME", palette = "RdYlBu")
+```
+
 
 3.  Make a barplot comparing the elevation of your 3 points in the Poudre Canyon (note: explore the `extract()` function in the `terra` package).
 
+```{r}
+# Cheat Way
+poudre_elev_point <- get_elev_point(poudre_points_sf)
+
+# Correct Way
+poudre_elev_point_extract <- extract(elevation_crop, poudre_points_sf)
+
+# Correct Dataframe Way
+poudre_elev_point_extract_df <- as.data.frame(poudre_points_sf) %>% 
+  mutate(elevation_data = extract(elevation_crop, poudre_points_sf)) %>% 
+  unnest(elevation_data)  #Unnest to remove '.' calls 
+
+kableExtra::kable(poudre_elev_point_extract_df)
+
+
+ggplot(poudre_elev_point_extract_df, aes(y = Elevation, x = name, fill = name)) + 
+  geom_bar(stat = "identity", alpha = 0.7) + 
+  geom_text(aes(label = Elevation), vjust = 2) + 
+  scale_fill_manual(values = c("darkorange","purple","cyan4")) + 
+  labs(x = "Location", 
+       y = "Elevation [Meters ASL]", 
+       fill = "") + 
+  theme_classic() + theme(legend.position = "bottom")
+
+
+
+```
+
 4.  Why are there 4 features in our Poudre Canyon Highway variable instead of 1?
+
+There are 4 features since the tigris::road function captures all line segments with a matching name, however, there are some segments that lead away from the full highway.
+The Poudre Canyon Highway has three disconnected branches from the main road. We see on the map that there are two small segments near Gateway Natural Area, and one disconnected segment to the North.
+

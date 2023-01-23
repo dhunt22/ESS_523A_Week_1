@@ -21,6 +21,8 @@ packages <- c('tidyverse',
               'rmarkdown',
               'tigris',
               'elevatr',
+              'terra',
+              'tmap',
               'rgdal')
 
 packageLoad(packages)
